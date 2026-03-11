@@ -4,6 +4,7 @@ import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Accounts } from './pages/Accounts'
 import { Settings } from './pages/Settings'
+import { Warp } from './pages/Warp'
 import { Toaster } from './components/ui/sonner'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ function App() {
                 >
                     <Route index element={<Dashboard />} />
                     <Route path='accounts' element={<Accounts />} />
+                    <Route path='warp' element={<Warp />} />
                     <Route path='settings' element={<Settings />} />
                 </Route>
             </Routes>

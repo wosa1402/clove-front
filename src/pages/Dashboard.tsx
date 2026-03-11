@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Users, Settings, Activity, Server } from 'lucide-react'
+import { Users, Settings, Activity, Server, Shield } from 'lucide-react'
 import { healthApi, statisticsApi } from '../api/client'
 import type { StatisticsResponse } from '../api/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -111,7 +111,7 @@ export function Dashboard() {
 
             <div>
                 <h2 className='text-2xl font-semibold mb-4'>快速操作</h2>
-                <div className='grid gap-4 md:grid-cols-2'>
+                <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
                     <Card className='hover:shadow-lg transition-all hover:border-primary/50'>
                         <CardHeader>
                             <div className='flex items-center space-x-4'>
@@ -127,6 +127,25 @@ export function Dashboard() {
                         <CardContent>
                             <Button asChild className='w-full'>
                                 <Link to='/accounts'>前往管理</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card className='hover:shadow-lg transition-all hover:border-primary/50'>
+                        <CardHeader>
+                            <div className='flex items-center space-x-4'>
+                                <div className='p-3 rounded-lg bg-emerald-50'>
+                                    <Shield className='h-6 w-6 text-emerald-600' />
+                                </div>
+                                <div className='space-y-1'>
+                                    <CardTitle>WARP IP</CardTitle>
+                                    <CardDescription>创建独立出口 IP 并绑定到 Claude 账户</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button asChild variant='outline' className='w-full'>
+                                <Link to='/warp'>前往管理</Link>
                             </Button>
                         </CardContent>
                     </Card>

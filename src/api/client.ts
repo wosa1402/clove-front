@@ -8,6 +8,8 @@ import type {
     SettingsRead,
     SettingsUpdate,
     StatisticsResponse,
+    WarpBindResponse,
+    WarpInstanceResponse,
 } from './types'
 
 const api = axios.create({
@@ -74,4 +76,15 @@ export const healthApi = {
 // 统计信息 API
 export const statisticsApi = {
     get: () => api.get<StatisticsResponse>('/api/admin/statistics'),
+}
+
+export const warpApi = {
+    list: () => api.get<WarpInstanceResponse[]>('/api/admin/warp'),
+    register: () => api.post<WarpInstanceResponse>('/api/admin/warp/register'),
+    start: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/start`),
+    stop: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/stop`),
+    delete: (instanceId: string) => api.delete<{ message: string }>(`/api/admin/warp/${instanceId}`),
+    bind: (instanceId: string, organizationUuid: string) =>
+        api.post<WarpBindResponse>(`/api/admin/warp/${instanceId}/bind/${organizationUuid}`),
+    unbind: (organizationUuid: string) => api.post<WarpBindResponse>(`/api/admin/warp/unbind/${organizationUuid}`),
 }

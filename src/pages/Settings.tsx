@@ -508,6 +508,83 @@ export function Settings() {
                 </CardContent>
             </Card>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle className='flex items-center gap-2'>
+                        <Shield className='h-5 w-5' />
+                        WARP 配置
+                    </CardTitle>
+                    <CardDescription>配置 WARP 二进制路径、端口范围和 IP 探测策略</CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                    <div className='grid gap-4 md:grid-cols-2'>
+                        <div className='space-y-2 md:col-span-2'>
+                            <Label htmlFor='warp-binary-path'>WARP 二进制路径 (可选)</Label>
+                            <Input
+                                id='warp-binary-path'
+                                value={settings.warp_binary_path || ''}
+                                onChange={e => updateSettings({ ...settings, warp_binary_path: e.target.value || null })}
+                                onBlur={() => handleFieldChange(settings)}
+                                placeholder='留空则优先从 data_folder/warp 或系统 PATH 查找'
+                            />
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='warp-base-port'>起始端口</Label>
+                            <Input
+                                id='warp-base-port'
+                                type='number'
+                                value={settings.warp_base_port}
+                                onChange={e => updateSettings({ ...settings, warp_base_port: parseInt(e.target.value) || 0 })}
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='warp-max-register-retries'>唯一 IP 重试次数</Label>
+                            <Input
+                                id='warp-max-register-retries'
+                                type='number'
+                                value={settings.warp_max_register_retries}
+                                onChange={e =>
+                                    updateSettings({
+                                        ...settings,
+                                        warp_max_register_retries: parseInt(e.target.value) || 0,
+                                    })
+                                }
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                        </div>
+
+                        <div className='space-y-2 md:col-span-2'>
+                            <Label htmlFor='warp-ip-check-url'>公网 IP 检测地址</Label>
+                            <Input
+                                id='warp-ip-check-url'
+                                value={settings.warp_ip_check_url}
+                                onChange={e => updateSettings({ ...settings, warp_ip_check_url: e.target.value })}
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='warp-startup-timeout'>启动超时（秒）</Label>
+                            <Input
+                                id='warp-startup-timeout'
+                                type='number'
+                                value={settings.warp_startup_timeout}
+                                onChange={e =>
+                                    updateSettings({
+                                        ...settings,
+                                        warp_startup_timeout: parseInt(e.target.value) || 0,
+                                    })
+                                }
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Chat Settings */}
             <Card>
                 <CardHeader>

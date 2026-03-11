@@ -37,6 +37,7 @@ export interface AccountResponse {
   has_oauth: boolean;
   last_used: string;
   resets_at?: string;
+  proxy_url?: string | null;
 }
 
 // 设置相关类型
@@ -57,6 +58,11 @@ export interface SettingsRead {
   oauth_authorize_url: string;
   oauth_token_url: string;
   oauth_redirect_uri: string;
+  warp_binary_path?: string | null;
+  warp_base_port: number;
+  warp_max_register_retries: number;
+  warp_ip_check_url: string;
+  warp_startup_timeout: number;
 }
 
 export interface SettingsUpdate {
@@ -76,6 +82,11 @@ export interface SettingsUpdate {
   oauth_authorize_url?: string;
   oauth_token_url?: string;
   oauth_redirect_uri?: string;
+  warp_binary_path?: string | null;
+  warp_base_port?: number;
+  warp_max_register_retries?: number;
+  warp_ip_check_url?: string;
+  warp_startup_timeout?: number;
 }
 
 export interface ApiError {
@@ -94,4 +105,21 @@ export interface AccountStats {
 export interface StatisticsResponse {
   status: 'healthy' | 'degraded';
   accounts: AccountStats;
+}
+
+export interface WarpInstanceResponse {
+  instance_id: string;
+  port: number;
+  proxy_url: string;
+  public_ip?: string | null;
+  status: 'starting' | 'running' | 'stopped' | 'error';
+  created_at?: string | null;
+  last_started_at?: string | null;
+  error_message?: string | null;
+}
+
+export interface WarpBindResponse {
+  organization_uuid: string;
+  proxy_url?: string | null;
+  warp_instance_id?: string | null;
 }
