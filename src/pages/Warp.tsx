@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
     AlertCircle,
     Globe,
+    Globe2,
     Link2,
     Loader2,
     Play,
@@ -123,7 +124,8 @@ export function Warp() {
     }
 
     const runningCount = instances.filter(instance => instance.status === 'running').length
-    const availableIpCount = instances.filter(instance => Boolean(instance.public_ip)).length
+    const availableIpCount = instances.filter(instance => Boolean(instance.public_ipv4 || instance.public_ipv6)).length
+    const dualStackCount = instances.filter(instance => Boolean(instance.public_ipv4 && instance.public_ipv6)).length
 
     if (loading) {
         return (
@@ -132,8 +134,8 @@ export function Warp() {
                     <Skeleton className='h-8 w-40' />
                     <Skeleton className='h-4 w-80' />
                 </div>
-                <div className='grid gap-4 md:grid-cols-3'>
-                    {[...Array(3)].map((_, index) => (
+                <div className='grid gap-4 md:grid-cols-4'>
+                    {[...Array(4)].map((_, index) => (
                         <Card key={index}>
                             <CardHeader>
                                 <Skeleton className='h-5 w-24' />
@@ -188,7 +190,7 @@ export function Warp() {
                 </Alert>
             )}
 
-            <div className='grid gap-4 md:grid-cols-3'>
+            <div className='grid gap-4 md:grid-cols-4'>
                 <Card>
                     <CardHeader>
                         <CardDescription>实例总数</CardDescription>
@@ -203,8 +205,14 @@ export function Warp() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardDescription>已拿到公网 IP</CardDescription>
+                        <CardDescription>已拿到出口 IP</CardDescription>
                         <CardTitle className='text-3xl'>{availableIpCount}</CardTitle>
+                    </CardHeader>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardDescription>双栈实例</CardDescription>
+                        <CardTitle className='text-3xl'>{dualStackCount}</CardTitle>
                     </CardHeader>
                 </Card>
             </div>
@@ -250,9 +258,16 @@ export function Warp() {
                                         <div className='rounded-lg border bg-muted/30 p-3'>
                                             <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>
                                                 <Globe className='h-4 w-4' />
-                                                公网 IP
+                                                IPv4
                                             </div>
-                                            <div className='font-mono text-sm'>{instance.public_ip || '待探测'}</div>
+                                            <div className='font-mono text-sm'>{instance.public_ipv4 || '待探测'}</div>
+                                        </div>
+                                        <div className='rounded-lg border bg-muted/30 p-3'>
+                                            <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>
+                                                <Globe2 className='h-4 w-4' />
+                                                IPv6
+                                            </div>
+                                            <div className='font-mono text-sm break-all'>{instance.public_ipv6 || '未分配 / 未探测'}</div>
                                         </div>
                                         <div className='rounded-lg border bg-muted/30 p-3'>
                                             <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>

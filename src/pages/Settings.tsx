@@ -557,11 +557,21 @@ export function Settings() {
                         </div>
 
                         <div className='space-y-2 md:col-span-2'>
-                            <Label htmlFor='warp-ip-check-url'>公网 IP 检测地址</Label>
+                            <Label htmlFor='warp-ip-check-url'>IPv4 检测地址</Label>
                             <Input
                                 id='warp-ip-check-url'
                                 value={settings.warp_ip_check_url}
                                 onChange={e => updateSettings({ ...settings, warp_ip_check_url: e.target.value })}
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                        </div>
+
+                        <div className='space-y-2 md:col-span-2'>
+                            <Label htmlFor='warp-ip-check-url-v6'>IPv6 检测地址</Label>
+                            <Input
+                                id='warp-ip-check-url-v6'
+                                value={settings.warp_ip_check_url_v6}
+                                onChange={e => updateSettings({ ...settings, warp_ip_check_url_v6: e.target.value })}
                                 onBlur={() => handleFieldChange(settings)}
                             />
                         </div>

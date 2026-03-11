@@ -62,6 +62,7 @@ export interface SettingsRead {
   warp_base_port: number;
   warp_max_register_retries: number;
   warp_ip_check_url: string;
+  warp_ip_check_url_v6: string;
   warp_startup_timeout: number;
 }
 
@@ -86,6 +87,7 @@ export interface SettingsUpdate {
   warp_base_port?: number;
   warp_max_register_retries?: number;
   warp_ip_check_url?: string;
+  warp_ip_check_url_v6?: string;
   warp_startup_timeout?: number;
 }
 
@@ -112,6 +114,8 @@ export interface WarpInstanceResponse {
   port: number;
   proxy_url: string;
   public_ip?: string | null;
+  public_ipv4?: string | null;
+  public_ipv6?: string | null;
   status: 'starting' | 'running' | 'stopped' | 'error';
   created_at?: string | null;
   last_started_at?: string | null;
