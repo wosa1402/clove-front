@@ -233,8 +233,13 @@ export function Warp() {
                 <div className='grid gap-4 xl:grid-cols-2'>
                     {instances.map(instance => {
                         const boundAccounts = accounts.filter(account => account.proxy_url === instance.proxy_url)
-                        const selectedAccount =
-                            selectedAccounts[instance.instance_id] || boundAccounts[0]?.organization_uuid
+                        const availableAccounts = accounts.filter(account => !account.proxy_url)
+                        const selectedAccountValue = selectedAccounts[instance.instance_id]
+                        const selectedAccount = availableAccounts.some(
+                            account => account.organization_uuid === selectedAccountValue,
+                        )
+                            ? selectedAccountValue
+                            : availableAccounts[0]?.organization_uuid
                         const startKey = `start:${instance.instance_id}`
                         const stopKey = `stop:${instance.instance_id}`
                         const deleteKey = `delete:${instance.instance_id}`
@@ -355,9 +360,9 @@ export function Warp() {
 
                                     <Separator />
 
-                                    <div className='space-y-3'>
-                                        <Label>绑定到账户</Label>
-                                        <div className='flex flex-col gap-2 sm:flex-row'>
+                                        <div className='space-y-3'>
+                                            <Label>绑定到账户</Label>
+                                            <div className='flex flex-col gap-2 sm:flex-row'>
                                             <Select
                                                 value={selectedAccount || undefined}
                                                 onValueChange={value =>
@@ -367,15 +372,27 @@ export function Warp() {
                                                     }))
                                                 }
                                             >
-                                                <SelectTrigger className='w-full'>
-                                                    <SelectValue placeholder='选择一个 Claude 账户' />
+                                                <SelectTrigger className='w-full' disabled={availableAccounts.length === 0}>
+                                                    <SelectValue
+                                                        placeholder={
+                                                            availableAccounts.length === 0
+                                                                ? '没有可绑定的 Claude 账户'
+                                                                : '选择一个 Claude 账户'
+                                                        }
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {accounts.map(account => (
-                                                        <SelectItem key={account.organization_uuid} value={account.organization_uuid}>
-                                                            {shortId(account.organization_uuid)}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {availableAccounts.length === 0 ? (
+                                                        <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                                                            所有账户都已绑定，请先解绑后再重新分配
+                                                        </div>
+                                                    ) : (
+                                                        availableAccounts.map(account => (
+                                                            <SelectItem key={account.organization_uuid} value={account.organization_uuid}>
+                                                                {shortId(account.organization_uuid)}
+                                                            </SelectItem>
+                                                        ))
+                                                    )}
                                                 </SelectContent>
                                             </Select>
 
@@ -391,7 +408,11 @@ export function Warp() {
                                                         toast.success(`已将 ${instance.instance_id} 绑定到账户 ${shortId(selectedAccount)}`)
                                                     })
                                                 }}
-                                                disabled={instance.status !== 'running' || pendingActions.has(bindKey)}
+                                                disabled={
+                                                    instance.status !== 'running' ||
+                                                    pendingActions.has(bindKey) ||
+                                                    availableAccounts.length === 0
+                                                }
                                             >
                                                 {pendingActions.has(bindKey) ? (
                                                     <Loader2 className='h-4 w-4 animate-spin' />
@@ -401,6 +422,12 @@ export function Warp() {
                                                 绑定
                                             </Button>
                                         </div>
+
+                                        {availableAccounts.length === 0 && (
+                                            <p className='text-sm text-muted-foreground'>
+                                                已绑定到其他 WARP 实例的 Claude 账户不会出现在这里；如需改绑，请先到原实例解绑。
+                                            </p>
+                                        )}
 
                                         <div className='space-y-2'>
                                             <div className='text-sm text-muted-foreground'>当前绑定</div>
