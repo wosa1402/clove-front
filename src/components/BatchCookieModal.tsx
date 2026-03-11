@@ -33,11 +33,11 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
     const validateAndProcessCookie = (cookieValue: string): { isValid: boolean; processedValue: string } => {
         let processedValue = cookieValue.trim()
 
-        if (processedValue.startsWith('sk-ant-sid01-')) {
+        if (/^sk-ant-sid\d+-/.test(processedValue)) {
             processedValue = `sessionKey=${processedValue}`
         }
 
-        const isValid = processedValue.startsWith('sessionKey=sk-ant-sid01-')
+        const isValid = /^sessionKey=sk-ant-sid\d+-/.test(processedValue)
 
         return { isValid, processedValue }
     }
@@ -186,7 +186,7 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                         <Textarea
                             id='cookies'
                             placeholder={
-                                '粘贴您的 Cookie，每行一个...\n\n例如：\nsk-ant-sid01-xxxxx\nsk-ant-sid01-yyyyy\nsessionKey=sk-ant-sid01-zzzzz'
+                                '粘贴您的 Cookie，每行一个...\n\n例如：\nsk-ant-sid01-xxxxx\nsk-ant-sid02-yyyyy\nsessionKey=sk-ant-sid01-zzzzz'
                             }
                             value={cookies}
                             onChange={e => setCookies(e.target.value)}
