@@ -514,7 +514,7 @@ export function Settings() {
                         <Shield className='h-5 w-5' />
                         WARP 配置
                     </CardTitle>
-                    <CardDescription>配置 WARP 二进制路径、端口范围和 IP 探测策略</CardDescription>
+                    <CardDescription>配置 WARP 二进制路径、申请代理、端口范围和 IP 探测策略</CardDescription>
                 </CardHeader>
                 <CardContent className='space-y-4'>
                     <div className='grid gap-4 md:grid-cols-2'>
@@ -527,6 +527,25 @@ export function Settings() {
                                 onBlur={() => handleFieldChange(settings)}
                                 placeholder='留空则优先从 data_folder/warp 或系统 PATH 查找'
                             />
+                        </div>
+
+                        <div className='space-y-2 md:col-span-2'>
+                            <Label htmlFor='warp-register-proxy-url'>申请代理 URL (可选)</Label>
+                            <Input
+                                id='warp-register-proxy-url'
+                                value={settings.warp_register_proxy_url || ''}
+                                onChange={e =>
+                                    updateSettings({
+                                        ...settings,
+                                        warp_register_proxy_url: e.target.value || null,
+                                    })
+                                }
+                                onBlur={() => handleFieldChange(settings)}
+                                placeholder='例如 socks5://user:pass@host:port 或 http://host:port'
+                            />
+                            <p className='text-sm text-muted-foreground'>
+                                仅用于创建或更新 WARP 身份时访问 Cloudflare API。实例创建成功后，实际 WARP 隧道和本地代理端口仍然直接连接。
+                            </p>
                         </div>
 
                         <div className='space-y-2'>

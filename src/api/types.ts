@@ -59,6 +59,7 @@ export interface SettingsRead {
   oauth_token_url: string;
   oauth_redirect_uri: string;
   warp_binary_path?: string | null;
+  warp_register_proxy_url?: string | null;
   warp_base_port: number;
   warp_max_register_retries: number;
   warp_ip_check_url: string;
@@ -84,6 +85,7 @@ export interface SettingsUpdate {
   oauth_token_url?: string;
   oauth_redirect_uri?: string;
   warp_binary_path?: string | null;
+  warp_register_proxy_url?: string | null;
   warp_base_port?: number;
   warp_max_register_retries?: number;
   warp_ip_check_url?: string;
