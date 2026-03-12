@@ -15,11 +15,12 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { accountsApi, warpApi } from '../api/client'
-import type { AccountResponse, WarpInstanceResponse } from '../api/types'
+import type { AccountResponse, WarpInstanceResponse, WarpRegisterMode, WarpRegisterRequest } from '../api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
@@ -56,6 +57,13 @@ function getStatusBadge(status: WarpInstanceResponse['status']) {
     }
 }
 
+const registerProxyModeStorageKey = 'warpRegisterProxyMode'
+const registerProxyUrlStorageKey = 'warpRegisterProxyUrl'
+
+function isWarpRegisterMode(value: string | null): value is WarpRegisterMode {
+    return value === 'default' || value === 'direct' || value === 'custom'
+}
+
 export function Warp() {
     const [instances, setInstances] = useState<WarpInstanceResponse[]>([])
     const [accounts, setAccounts] = useState<AccountResponse[]>([])
@@ -64,6 +72,8 @@ export function Warp() {
     const [creating, setCreating] = useState(false)
     const [pendingActions, setPendingActions] = useState<Set<string>>(new Set())
     const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({})
+    const [registerProxyMode, setRegisterProxyMode] = useState<WarpRegisterMode>('default')
+    const [registerProxyUrl, setRegisterProxyUrl] = useState('')
 
     const loadData = async (showRefreshing = false) => {
         if (showRefreshing) {
@@ -88,6 +98,26 @@ export function Warp() {
         loadData()
     }, [])
 
+    useEffect(() => {
+        const savedMode = localStorage.getItem(registerProxyModeStorageKey)
+        const savedProxyUrl = localStorage.getItem(registerProxyUrlStorageKey)
+
+        if (isWarpRegisterMode(savedMode)) {
+            setRegisterProxyMode(savedMode)
+        }
+        if (savedProxyUrl) {
+            setRegisterProxyUrl(savedProxyUrl)
+        }
+    }, [])
+
+    useEffect(() => {
+        localStorage.setItem(registerProxyModeStorageKey, registerProxyMode)
+    }, [registerProxyMode])
+
+    useEffect(() => {
+        localStorage.setItem(registerProxyUrlStorageKey, registerProxyUrl)
+    }, [registerProxyUrl])
+
     const setActionPending = (key: string, active: boolean) => {
         setPendingActions(prev => {
             const next = new Set(prev)
@@ -111,9 +141,23 @@ export function Warp() {
     }
 
     const handleRegister = async () => {
+        const trimmedRegisterProxyUrl = registerProxyUrl.trim()
+        if (registerProxyMode === 'custom' && !trimmedRegisterProxyUrl) {
+            toast.error('自定义申请代理模式需要填写代理 URL')
+            return
+        }
+
         setCreating(true)
         try {
-            await warpApi.register()
+            const payload: WarpRegisterRequest = {
+                register_proxy_mode: registerProxyMode,
+            }
+
+            if (registerProxyMode === 'custom') {
+                payload.register_proxy_url = trimmedRegisterProxyUrl
+            }
+
+            await warpApi.register(payload)
             toast.success('新的 WARP IP 已创建')
             await loadData()
         } catch (error) {
@@ -182,6 +226,47 @@ export function Warp() {
                     </Button>
                 </div>
             </div>
+
+            <Card className='border-dashed'>
+                <CardHeader className='pb-3'>
+                    <CardTitle className='text-base'>本次申请方式</CardTitle>
+                    <CardDescription>
+                        创建新 WARP IP 时可临时切换前置代理。默认模式会使用设置页中的申请代理；直连模式会忽略默认配置；自定义模式则只对本次创建生效。
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className='grid gap-4 md:grid-cols-2'>
+                    <div className='space-y-2'>
+                        <Label htmlFor='register-proxy-mode'>申请模式</Label>
+                        <Select value={registerProxyMode} onValueChange={value => setRegisterProxyMode(value as WarpRegisterMode)}>
+                            <SelectTrigger id='register-proxy-mode'>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value='default'>使用设置中的默认代理</SelectItem>
+                                <SelectItem value='direct'>本次直连申请</SelectItem>
+                                <SelectItem value='custom'>本次使用自定义代理</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className='space-y-2'>
+                        <Label htmlFor='register-proxy-url'>本次申请代理 URL</Label>
+                        <Input
+                            id='register-proxy-url'
+                            value={registerProxyUrl}
+                            onChange={event => setRegisterProxyUrl(event.target.value)}
+                            disabled={registerProxyMode !== 'custom'}
+                            placeholder={
+                                registerProxyMode === 'custom'
+                                    ? '例如 socks5://user:pass@host:port'
+                                    : registerProxyMode === 'direct'
+                                      ? '本次强制直连，不使用前置代理'
+                                      : '留空时使用设置页中的默认申请代理'
+                            }
+                        />
+                    </div>
+                </CardContent>
+            </Card>
 
             {accounts.length === 0 && (
                 <Alert>

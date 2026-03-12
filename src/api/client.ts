@@ -10,6 +10,7 @@ import type {
     StatisticsResponse,
     WarpBindResponse,
     WarpInstanceResponse,
+    WarpRegisterRequest,
 } from './types'
 
 const api = axios.create({
@@ -82,7 +83,7 @@ export const statisticsApi = {
 
 export const warpApi = {
     list: () => api.get<WarpInstanceResponse[]>('/api/admin/warp'),
-    register: () => api.post<WarpInstanceResponse>('/api/admin/warp/register'),
+    register: (payload?: WarpRegisterRequest) => api.post<WarpInstanceResponse>('/api/admin/warp/register', payload),
     start: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/start`),
     stop: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/stop`),
     delete: (instanceId: string) => api.delete<{ message: string }>(`/api/admin/warp/${instanceId}`),

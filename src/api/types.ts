@@ -124,6 +124,13 @@ export interface WarpInstanceResponse {
   error_message?: string | null;
 }
 
+export type WarpRegisterMode = 'default' | 'direct' | 'custom';
+
+export interface WarpRegisterRequest {
+  register_proxy_mode?: WarpRegisterMode;
+  register_proxy_url?: string | null;
+}
+
 export interface WarpBindResponse {
   organization_uuid: string;
   proxy_url?: string | null;
