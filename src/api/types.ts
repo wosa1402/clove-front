@@ -60,6 +60,9 @@ export interface SettingsRead {
   oauth_redirect_uri: string;
   warp_binary_path?: string | null;
   warp_register_proxy_url?: string | null;
+  warp_endpoint_mode: 'auto' | 'scan' | 'custom';
+  warp_custom_endpoints: string[];
+  warp_scan_rtt_ms: number;
   warp_base_port: number;
   warp_max_register_retries: number;
   warp_ip_check_url: string;
@@ -86,6 +89,9 @@ export interface SettingsUpdate {
   oauth_redirect_uri?: string;
   warp_binary_path?: string | null;
   warp_register_proxy_url?: string | null;
+  warp_endpoint_mode?: 'auto' | 'scan' | 'custom';
+  warp_custom_endpoints?: string[];
+  warp_scan_rtt_ms?: number;
   warp_base_port?: number;
   warp_max_register_retries?: number;
   warp_ip_check_url?: string;
@@ -115,6 +121,8 @@ export interface WarpInstanceResponse {
   instance_id: string;
   port: number;
   proxy_url: string;
+  endpoint_mode: 'auto' | 'scan' | 'custom';
+  custom_endpoints: string[];
   public_ip?: string | null;
   public_ipv4?: string | null;
   public_ipv6?: string | null;
@@ -125,10 +133,13 @@ export interface WarpInstanceResponse {
 }
 
 export type WarpRegisterMode = 'default' | 'direct' | 'custom';
+export type WarpEndpointMode = 'default' | 'auto' | 'scan' | 'custom';
 
 export interface WarpRegisterRequest {
   register_proxy_mode?: WarpRegisterMode;
   register_proxy_url?: string | null;
+  endpoint_mode?: WarpEndpointMode;
+  custom_endpoints?: string[] | null;
 }
 
 export interface WarpBindResponse {

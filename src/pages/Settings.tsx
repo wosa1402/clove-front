@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -25,6 +26,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { useIsMobile } from '@/hooks/use-mobile'
+
+function parseEndpointInput(value: string): string[] {
+    return value
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .flatMap(part => part.split(','))
+        .map(part => part.trim())
+        .filter(Boolean)
+}
 
 export function Settings() {
     const [settings, setSettings] = useState<SettingsRead | null>(null)
@@ -545,6 +556,71 @@ export function Settings() {
                             />
                             <p className='text-sm text-muted-foreground'>
                                 仅用于创建或更新 WARP 身份时访问 Cloudflare API。实例创建成功后，实际 WARP 隧道和本地代理端口仍然直接连接。
+                            </p>
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='warp-endpoint-mode'>默认 endpoint 策略</Label>
+                            <Select
+                                value={settings.warp_endpoint_mode}
+                                onValueChange={value => {
+                                    const nextSettings = {
+                                        ...settings,
+                                        warp_endpoint_mode: value as SettingsRead['warp_endpoint_mode'],
+                                    }
+                                    updateSettings(nextSettings)
+                                    void handleFieldChange(nextSettings)
+                                }}
+                            >
+                                <SelectTrigger id='warp-endpoint-mode'>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value='auto'>自动</SelectItem>
+                                    <SelectItem value='scan'>扫描最优 endpoint</SelectItem>
+                                    <SelectItem value='custom'>自定义 endpoint 列表</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className='text-sm text-muted-foreground'>
+                                自动模式使用内置缓存和默认逻辑；扫描模式会先测速再连接；自定义模式会固定使用你提供的 endpoint 列表。
+                            </p>
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='warp-scan-rtt-ms'>扫描 RTT 上限（毫秒）</Label>
+                            <Input
+                                id='warp-scan-rtt-ms'
+                                type='number'
+                                value={settings.warp_scan_rtt_ms}
+                                onChange={e =>
+                                    updateSettings({
+                                        ...settings,
+                                        warp_scan_rtt_ms: parseInt(e.target.value) || 0,
+                                    })
+                                }
+                                onBlur={() => handleFieldChange(settings)}
+                            />
+                            <p className='text-sm text-muted-foreground'>仅在“扫描最优 endpoint”模式下生效，值越小越严格。</p>
+                        </div>
+
+                        <div className='space-y-2 md:col-span-2'>
+                            <Label htmlFor='warp-custom-endpoints'>默认自定义 endpoint 列表</Label>
+                            <Textarea
+                                id='warp-custom-endpoints'
+                                value={settings.warp_custom_endpoints.join('\n')}
+                                onChange={e =>
+                                    updateSettings({
+                                        ...settings,
+                                        warp_custom_endpoints: parseEndpointInput(e.target.value),
+                                    })
+                                }
+                                onBlur={() => handleFieldChange(settings)}
+                                placeholder={'每行一个 endpoint，或使用逗号分隔\n例如 162.159.192.1:2408'}
+                                disabled={settings.warp_endpoint_mode !== 'custom'}
+                                className='min-h-28 font-mono'
+                            />
+                            <p className='text-sm text-muted-foreground'>
+                                仅在“自定义 endpoint 列表”模式下生效。支持多行或逗号分隔，建议填写多个 endpoint 便于失败切换。
                             </p>
                         </div>
 

@@ -86,6 +86,7 @@ export const warpApi = {
     register: (payload?: WarpRegisterRequest) => api.post<WarpInstanceResponse>('/api/admin/warp/register', payload),
     start: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/start`),
     stop: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/stop`),
+    restart: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/restart`),
     delete: (instanceId: string) => api.delete<{ message: string }>(`/api/admin/warp/${instanceId}`),
     bind: (instanceId: string, organizationUuid: string) =>
         api.post<WarpBindResponse>(`/api/admin/warp/${instanceId}/bind/${organizationUuid}`),

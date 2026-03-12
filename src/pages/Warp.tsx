@@ -15,7 +15,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { accountsApi, warpApi } from '../api/client'
-import type { AccountResponse, WarpInstanceResponse, WarpRegisterMode, WarpRegisterRequest } from '../api/types'
+import type {
+    AccountResponse,
+    WarpEndpointMode,
+    WarpInstanceResponse,
+    WarpRegisterMode,
+    WarpRegisterRequest,
+} from '../api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +31,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 
 function formatDate(value?: string | null) {
     if (!value) {
@@ -36,6 +43,27 @@ function formatDate(value?: string | null) {
 
 function shortId(value: string) {
     return `${value.slice(0, 8)}...`
+}
+
+function parseEndpointInput(value: string): string[] {
+    return value
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+        .flatMap(part => part.split(','))
+        .map(part => part.trim())
+        .filter(Boolean)
+}
+
+function describeEndpointMode(instance: WarpInstanceResponse) {
+    switch (instance.endpoint_mode) {
+        case 'scan':
+            return '扫描最优 endpoint'
+        case 'custom':
+            return `自定义 endpoint 列表（${instance.custom_endpoints.length} 个）`
+        default:
+            return '自动'
+    }
 }
 
 function getStatusBadge(status: WarpInstanceResponse['status']) {
@@ -59,9 +87,15 @@ function getStatusBadge(status: WarpInstanceResponse['status']) {
 
 const registerProxyModeStorageKey = 'warpRegisterProxyMode'
 const registerProxyUrlStorageKey = 'warpRegisterProxyUrl'
+const endpointModeStorageKey = 'warpEndpointMode'
+const customEndpointsStorageKey = 'warpCustomEndpoints'
 
 function isWarpRegisterMode(value: string | null): value is WarpRegisterMode {
     return value === 'default' || value === 'direct' || value === 'custom'
+}
+
+function isWarpEndpointMode(value: string | null): value is WarpEndpointMode {
+    return value === 'default' || value === 'auto' || value === 'scan' || value === 'custom'
 }
 
 export function Warp() {
@@ -74,6 +108,8 @@ export function Warp() {
     const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({})
     const [registerProxyMode, setRegisterProxyMode] = useState<WarpRegisterMode>('default')
     const [registerProxyUrl, setRegisterProxyUrl] = useState('')
+    const [endpointMode, setEndpointMode] = useState<WarpEndpointMode>('default')
+    const [customEndpointsText, setCustomEndpointsText] = useState('')
 
     const loadData = async (showRefreshing = false) => {
         if (showRefreshing) {
@@ -101,12 +137,20 @@ export function Warp() {
     useEffect(() => {
         const savedMode = localStorage.getItem(registerProxyModeStorageKey)
         const savedProxyUrl = localStorage.getItem(registerProxyUrlStorageKey)
+        const savedEndpointMode = localStorage.getItem(endpointModeStorageKey)
+        const savedCustomEndpoints = localStorage.getItem(customEndpointsStorageKey)
 
         if (isWarpRegisterMode(savedMode)) {
             setRegisterProxyMode(savedMode)
         }
         if (savedProxyUrl) {
             setRegisterProxyUrl(savedProxyUrl)
+        }
+        if (isWarpEndpointMode(savedEndpointMode)) {
+            setEndpointMode(savedEndpointMode)
+        }
+        if (savedCustomEndpoints) {
+            setCustomEndpointsText(savedCustomEndpoints)
         }
     }, [])
 
@@ -117,6 +161,14 @@ export function Warp() {
     useEffect(() => {
         localStorage.setItem(registerProxyUrlStorageKey, registerProxyUrl)
     }, [registerProxyUrl])
+
+    useEffect(() => {
+        localStorage.setItem(endpointModeStorageKey, endpointMode)
+    }, [endpointMode])
+
+    useEffect(() => {
+        localStorage.setItem(customEndpointsStorageKey, customEndpointsText)
+    }, [customEndpointsText])
 
     const setActionPending = (key: string, active: boolean) => {
         setPendingActions(prev => {
@@ -142,8 +194,13 @@ export function Warp() {
 
     const handleRegister = async () => {
         const trimmedRegisterProxyUrl = registerProxyUrl.trim()
+        const customEndpoints = parseEndpointInput(customEndpointsText)
         if (registerProxyMode === 'custom' && !trimmedRegisterProxyUrl) {
             toast.error('自定义申请代理模式需要填写代理 URL')
+            return
+        }
+        if (endpointMode === 'custom' && customEndpoints.length === 0) {
+            toast.error('自定义 endpoint 模式需要至少填写一个 endpoint')
             return
         }
 
@@ -151,10 +208,14 @@ export function Warp() {
         try {
             const payload: WarpRegisterRequest = {
                 register_proxy_mode: registerProxyMode,
+                endpoint_mode: endpointMode,
             }
 
             if (registerProxyMode === 'custom') {
                 payload.register_proxy_url = trimmedRegisterProxyUrl
+            }
+            if (endpointMode === 'custom') {
+                payload.custom_endpoints = customEndpoints
             }
 
             await warpApi.register(payload)
@@ -229,9 +290,9 @@ export function Warp() {
 
             <Card className='border-dashed'>
                 <CardHeader className='pb-3'>
-                    <CardTitle className='text-base'>本次申请方式</CardTitle>
+                    <CardTitle className='text-base'>本次创建策略</CardTitle>
                     <CardDescription>
-                        创建新 WARP IP 时可临时切换前置代理。默认模式会使用设置页中的申请代理；直连模式会忽略默认配置；自定义模式则只对本次创建生效。
+                        创建新 WARP IP 时可临时切换前置代理和 endpoint 策略。带“默认”的选项会读取设置页中的全局配置，其余模式只对本次创建生效。
                     </CardDescription>
                 </CardHeader>
                 <CardContent className='grid gap-4 md:grid-cols-2'>
@@ -263,6 +324,39 @@ export function Warp() {
                                       ? '本次强制直连，不使用前置代理'
                                       : '留空时使用设置页中的默认申请代理'
                             }
+                        />
+                    </div>
+
+                    <div className='space-y-2'>
+                        <Label htmlFor='endpoint-mode'>endpoint 策略</Label>
+                        <Select value={endpointMode} onValueChange={value => setEndpointMode(value as WarpEndpointMode)}>
+                            <SelectTrigger id='endpoint-mode'>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value='default'>使用设置中的默认策略</SelectItem>
+                                <SelectItem value='auto'>本次自动</SelectItem>
+                                <SelectItem value='scan'>本次扫描最优 endpoint</SelectItem>
+                                <SelectItem value='custom'>本次使用自定义 endpoint 列表</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className='space-y-2 md:col-span-2'>
+                        <Label htmlFor='custom-endpoints'>本次自定义 endpoint 列表</Label>
+                        <Textarea
+                            id='custom-endpoints'
+                            value={customEndpointsText}
+                            onChange={event => setCustomEndpointsText(event.target.value)}
+                            disabled={endpointMode !== 'custom'}
+                            placeholder={
+                                endpointMode === 'custom'
+                                    ? '每行一个 endpoint，或使用逗号分隔，例如 162.159.192.1:2408'
+                                    : endpointMode === 'scan'
+                                      ? '本次会先扫描最优 endpoint，无需手动填写'
+                                      : '留空时按默认策略或自动模式处理'
+                            }
+                            className='min-h-28 font-mono'
                         />
                     </div>
                 </CardContent>
@@ -327,6 +421,7 @@ export function Warp() {
                             : availableAccounts[0]?.organization_uuid
                         const startKey = `start:${instance.instance_id}`
                         const stopKey = `stop:${instance.instance_id}`
+                        const restartKey = `restart:${instance.instance_id}`
                         const deleteKey = `delete:${instance.instance_id}`
                         const bindKey = `bind:${instance.instance_id}`
 
@@ -340,6 +435,7 @@ export function Warp() {
                                                 {instance.instance_id}
                                             </CardTitle>
                                             <CardDescription>独立 WARP 代理实例，可分配给一个或多个 Claude 账户。</CardDescription>
+                                            <p className='text-sm text-muted-foreground'>endpoint 策略：{describeEndpointMode(instance)}</p>
                                         </div>
                                         {getStatusBadge(instance.status)}
                                     </div>
@@ -423,6 +519,24 @@ export function Warp() {
                                                 启动
                                             </Button>
                                         )}
+
+                                        <Button
+                                            variant='outline'
+                                            onClick={() =>
+                                                runAction(restartKey, async () => {
+                                                    await warpApi.restart(instance.instance_id)
+                                                    toast.success(`${instance.instance_id} 已重启，并重新探测出口 IP`)
+                                                })
+                                            }
+                                            disabled={instance.status === 'starting' || pendingActions.has(restartKey)}
+                                        >
+                                            {pendingActions.has(restartKey) ? (
+                                                <Loader2 className='h-4 w-4 animate-spin' />
+                                            ) : (
+                                                <RefreshCw className='h-4 w-4' />
+                                            )}
+                                            重启
+                                        </Button>
 
                                         <Button
                                             variant='destructive'
