@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Loader2, AlertCircle, CheckCircle, Cookie, FileText, Copy, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Loader2, AlertCircle, CheckCircle, Cookie, FileText, Copy, Check, XCircle } from 'lucide-react'
 import { accountsApi } from '../api/client'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
@@ -18,7 +18,7 @@ interface BatchCookieModalProps {
 
 interface CookieResult {
     cookie: string
-    status: 'pending' | 'processing' | 'success' | 'error'
+    status: 'pending' | 'processing' | 'success' | 'error' | 'cancelled'
     error?: string
     organizationUuid?: string
 }
@@ -29,6 +29,7 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
     const [results, setResults] = useState<CookieResult[]>([])
     const [showResults, setShowResults] = useState(false)
     const isMobile = useIsMobile()
+    const cancelledRef = useRef(false)
 
     const validateAndProcessCookie = (cookieValue: string): { isValid: boolean; processedValue: string } => {
         let processedValue = cookieValue.trim()
@@ -54,6 +55,7 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
             return
         }
 
+        cancelledRef.current = false
         setIsProcessing(true)
         setShowResults(true)
 
@@ -64,6 +66,20 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
         setResults(initialResults)
 
         for (let i = 0; i < cookieLines.length; i++) {
+            // 检查是否已取消
+            if (cancelledRef.current) {
+                setResults(prev => {
+                    const updated = [...prev]
+                    for (let j = i; j < updated.length; j++) {
+                        if (updated[j].status === 'pending') {
+                            updated[j] = { ...updated[j], status: 'cancelled' }
+                        }
+                    }
+                    return updated
+                })
+                break
+            }
+
             const cookie = cookieLines[i]
 
             setResults(prev => {
@@ -126,12 +142,13 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
 
     const getProgress = () => {
         if (results.length === 0) return 0
-        const processed = results.filter(r => r.status === 'success' || r.status === 'error').length
+        const processed = results.filter(r => r.status === 'success' || r.status === 'error' || r.status === 'cancelled').length
         return (processed / results.length) * 100
     }
 
     const getSuccessCount = () => results.filter(r => r.status === 'success').length
     const getErrorCount = () => results.filter(r => r.status === 'error').length
+    const getCancelledCount = () => results.filter(r => r.status === 'cancelled').length
 
     const copyFailedCookies = async () => {
         const failedCookies = results
@@ -165,13 +182,24 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                 return <AlertCircle className='h-4 w-4 text-red-500' />
             case 'processing':
                 return <Loader2 className='h-4 w-4 animate-spin' />
+            case 'cancelled':
+                return <XCircle className='h-4 w-4 text-muted-foreground' />
             default:
                 return <Cookie className='h-4 w-4 text-muted-foreground' />
         }
     }
 
+    // 取消批量处理
+    const handleCancel = () => {
+        cancelledRef.current = true
+    }
+
+    // 关闭弹窗
     const handleClose = () => {
-        if (isProcessing) return
+        if (isProcessing) {
+            handleCancel()
+            return
+        }
         onClose()
     }
 
@@ -202,7 +230,9 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                         <div className='flex items-center justify-between'>
                             <Label>处理进度</Label>
                             <span className='text-sm text-muted-foreground'>
-                                {getSuccessCount()} 成功 / {getErrorCount()} 失败 / {results.length} 总计
+                                {getSuccessCount()} 成功 / {getErrorCount()} 失败
+                                {getCancelledCount() > 0 && ` / ${getCancelledCount()} 已取消`}
+                                {' '}/ {results.length} 总计
                             </span>
                         </div>
                         <Progress value={getProgress()} className='h-2' />
@@ -236,8 +266,10 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                             <Alert>
                                 <FileText className='h-4 w-4' />
                                 <AlertDescription>
-                                    处理完成！成功添加 {getSuccessCount()} 个账户
-                                    {getErrorCount() > 0 && `，${getErrorCount()} 个失败`}。
+                                    {getCancelledCount() > 0 ? '处理已取消！' : '处理完成！'}
+                                    成功添加 {getSuccessCount()} 个账户
+                                    {getErrorCount() > 0 && `，${getErrorCount()} 个失败`}
+                                    {getCancelledCount() > 0 && `，${getCancelledCount()} 个已取消`}。
                                 </AlertDescription>
                             </Alert>
                             {getErrorCount() > 0 && (
@@ -272,9 +304,16 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                     </Button>
                 </>
             ) : (
-                <Button onClick={handleClose} disabled={isProcessing}>
-                    {isProcessing ? '处理中...' : '完成'}
-                </Button>
+                <>
+                    {isProcessing && (
+                        <Button type='button' variant='outline' onClick={handleCancel}>
+                            取消
+                        </Button>
+                    )}
+                    <Button onClick={handleClose} disabled={isProcessing}>
+                        {isProcessing ? '处理中...' : '完成'}
+                    </Button>
+                </>
             )}
         </>
     )
