@@ -218,7 +218,7 @@ export function BatchCookieModal({ onClose }: BatchCookieModalProps) {
                             }
                             value={cookies}
                             onChange={e => setCookies(e.target.value)}
-                            className='min-h-[200px] font-mono text-sm break-all'
+                            className='min-h-[200px] max-h-[70vh] overflow-y-auto font-mono text-sm break-all'
                             required
                         />
                         <p className='text-sm text-muted-foreground'>支持直接粘贴 sessionKey 或完整的 Cookie 格式</p>
