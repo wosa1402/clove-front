@@ -636,7 +636,7 @@ export function Settings() {
                         </div>
 
                         <div className='space-y-2'>
-                            <Label htmlFor='warp-max-register-retries'>唯一 IP 重试次数</Label>
+                            <Label htmlFor='warp-max-register-retries'>唯一出口组合重试次数</Label>
                             <Input
                                 id='warp-max-register-retries'
                                 type='number'
