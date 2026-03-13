@@ -85,6 +85,55 @@ function getStatusBadge(status: WarpInstanceResponse['status']) {
     }
 }
 
+function getEgressUniquenessInfo(
+    instance: WarpInstanceResponse,
+    ipv4Counts: Record<string, number>,
+    ipv6Counts: Record<string, number>,
+) {
+    const ipv4 = instance.public_ipv4?.trim()
+    const ipv6 = instance.public_ipv6?.trim()
+    const ipv4Unique = Boolean(ipv4 && ipv4Counts[ipv4] === 1)
+    const ipv6Unique = Boolean(ipv6 && ipv6Counts[ipv6] === 1)
+
+    if (ipv4Unique && ipv6Unique) {
+        return {
+            label: '双栈都唯一',
+            description: '当前实例的 IPv4 和 IPv6 都没有与其他实例重复。',
+            className: 'bg-emerald-500 hover:bg-emerald-500',
+        }
+    }
+
+    if (ipv4Unique) {
+        return {
+            label: 'IPv4 唯一',
+            description: '当前实例虽然可能复用了 IPv6，但 IPv4 是独立出口。',
+            className: 'bg-sky-500 hover:bg-sky-500',
+        }
+    }
+
+    if (ipv6Unique) {
+        return {
+            label: 'IPv6 唯一',
+            description: '当前实例虽然可能复用了 IPv4，但 IPv6 是独立出口。',
+            className: 'bg-violet-500 hover:bg-violet-500',
+        }
+    }
+
+    if (ipv4 || ipv6) {
+        return {
+            label: '出口重复',
+            description: '当前实例的 IPv4 和 IPv6 都已被其他实例占用。',
+            className: 'bg-amber-500 hover:bg-amber-500 text-black',
+        }
+    }
+
+    return {
+        label: '待探测',
+        description: '实例尚未探测到可用的 IPv4 或 IPv6 出口。',
+        className: '',
+    }
+}
+
 const registerProxyModeStorageKey = 'warpRegisterProxyMode'
 const registerProxyUrlStorageKey = 'warpRegisterProxyUrl'
 const endpointModeStorageKey = 'warpEndpointMode'
@@ -232,6 +281,18 @@ export function Warp() {
     const runningCount = instances.filter(instance => instance.status === 'running').length
     const availableIpCount = instances.filter(instance => Boolean(instance.public_ipv4 || instance.public_ipv6)).length
     const dualStackCount = instances.filter(instance => Boolean(instance.public_ipv4 && instance.public_ipv6)).length
+    const ipv4Counts = instances.reduce<Record<string, number>>((acc, instance) => {
+        if (instance.public_ipv4) {
+            acc[instance.public_ipv4] = (acc[instance.public_ipv4] || 0) + 1
+        }
+        return acc
+    }, {})
+    const ipv6Counts = instances.reduce<Record<string, number>>((acc, instance) => {
+        if (instance.public_ipv6) {
+            acc[instance.public_ipv6] = (acc[instance.public_ipv6] || 0) + 1
+        }
+        return acc
+    }, {})
 
     if (loading) {
         return (
@@ -431,6 +492,7 @@ export function Warp() {
                         const restartKey = `restart:${instance.instance_id}`
                         const deleteKey = `delete:${instance.instance_id}`
                         const bindKey = `bind:${instance.instance_id}`
+                        const uniquenessInfo = getEgressUniquenessInfo(instance, ipv4Counts, ipv6Counts)
 
                         return (
                             <Card key={instance.instance_id} className='gap-4'>
@@ -443,6 +505,10 @@ export function Warp() {
                                             </CardTitle>
                                             <CardDescription>独立 WARP 代理实例，可分配给一个或多个 Claude 账户。</CardDescription>
                                             <p className='text-sm text-muted-foreground'>endpoint 策略：{describeEndpointMode(instance)}</p>
+                                            <div className='flex flex-wrap items-center gap-2 pt-1'>
+                                                <Badge className={uniquenessInfo.className}>{uniquenessInfo.label}</Badge>
+                                                <span className='text-xs text-muted-foreground'>{uniquenessInfo.description}</span>
+                                            </div>
                                         </div>
                                         {getStatusBadge(instance.status)}
                                     </div>
