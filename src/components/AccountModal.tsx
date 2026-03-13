@@ -72,11 +72,11 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
     const validateAndProcessCookie = (cookieValue: string): { isValid: boolean; processedValue: string } => {
         let processedValue = cookieValue.trim()
 
-        if (processedValue.startsWith('sk-ant-sid01-')) {
+        if (/^sk-ant-sid\d+-/.test(processedValue)) {
             processedValue = `sessionKey=${processedValue}`
         }
 
-        const isValid = processedValue.startsWith('sessionKey=sk-ant-sid01-')
+        const isValid = /^sessionKey=sk-ant-sid\d+-/.test(processedValue)
 
         return { isValid, processedValue }
     }
@@ -172,7 +172,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
                 <AlertDialogHeader>
                     <AlertDialogTitle>Cookie 格式警告</AlertDialogTitle>
                     <AlertDialogDescription>
-                        检测到您输入的 Cookie 格式可能不正确。标准格式应包含 "sessionKey=sk-ant-sid01-" 开头。
+                        检测到您输入的 Cookie 格式可能不正确。标准格式应以 "sessionKey=sk-ant-sid[XX]-" 开头（如 sid01、sid02）。
                         <br />
                         <br />
                         如果您使用的是反向代理或自定义配置，可以忽略此警告继续提交。
@@ -198,7 +198,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
                         placeholder='粘贴您的 Claude Cookie...'
                         value={formData.cookie_value}
                         onChange={e => setFormData({ ...formData, cookie_value: e.target.value })}
-                        className='min-h-[100px] font-mono text-sm break-all'
+                        className='min-h-[100px] max-h-[70vh] overflow-y-auto font-mono text-sm break-all'
                         required
                     />
                 </div>
