@@ -17,6 +17,7 @@ export interface AccountUpdate {
   oauth_token?: OAuthToken;
   capabilities?: string[];
   status?: 'valid' | 'invalid' | 'rate_limited';
+  network_mode?: 'inherit' | 'direct_auto' | 'direct_ipv4' | 'direct_ipv6';
 }
 
 export interface OAuthCodeExchange {
@@ -38,6 +39,18 @@ export interface AccountResponse {
   last_used: string;
   resets_at?: string;
   proxy_url?: string | null;
+  warp_instance_id?: string | null;
+  proxy_ip_family?: 'auto' | 'ipv4' | 'ipv6' | null;
+  egress_ip?: string | null;
+  network_mode: 'inherit' | 'direct_auto' | 'direct_ipv4' | 'direct_ipv6' | 'warp' | 'custom_proxy';
+}
+
+export interface AccountEgressTestResponse {
+  organization_uuid: string;
+  network_mode: 'inherit' | 'direct_auto' | 'direct_ipv4' | 'direct_ipv6' | 'warp' | 'custom_proxy';
+  public_ipv4?: string | null;
+  public_ipv6?: string | null;
+  primary_ip?: string | null;
 }
 
 // 设置相关类型
@@ -121,6 +134,10 @@ export interface WarpInstanceResponse {
   instance_id: string;
   port: number;
   proxy_url: string;
+  ipv4_proxy_port: number;
+  ipv6_proxy_port: number;
+  ipv4_proxy_url: string;
+  ipv6_proxy_url: string;
   endpoint_mode: 'auto' | 'scan' | 'custom';
   custom_endpoints: string[];
   public_ip?: string | null;
@@ -146,4 +163,9 @@ export interface WarpBindResponse {
   organization_uuid: string;
   proxy_url?: string | null;
   warp_instance_id?: string | null;
+  proxy_ip_family?: 'auto' | 'ipv4' | 'ipv6' | null;
+}
+
+export interface WarpBindRequest {
+  ip_family?: 'auto' | 'ipv4' | 'ipv6';
 }

@@ -2,6 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import type {
     AccountResponse,
+    AccountEgressTestResponse,
     AccountCreate,
     AccountUpdate,
     OAuthCodeExchange,
@@ -9,6 +10,7 @@ import type {
     SettingsUpdate,
     StatisticsResponse,
     WarpBindResponse,
+    WarpBindRequest,
     WarpInstanceResponse,
     WarpRegisterRequest,
 } from './types'
@@ -61,6 +63,8 @@ export const accountsApi = {
     update: (organizationUuid: string, account: AccountUpdate) =>
         api.put<AccountResponse>(`/api/admin/accounts/${organizationUuid}`, account),
     delete: (organizationUuid: string) => api.delete(`/api/admin/accounts/${organizationUuid}`),
+    testEgress: (organizationUuid: string) =>
+        api.post<AccountEgressTestResponse>(`/api/admin/accounts/${organizationUuid}/test-egress`),
     exchangeOAuthCode: (exchangeData: OAuthCodeExchange) =>
         api.post<AccountResponse>('/api/admin/accounts/oauth/exchange', exchangeData),
 }
@@ -88,7 +92,7 @@ export const warpApi = {
     stop: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/stop`),
     restart: (instanceId: string) => api.post<WarpInstanceResponse>(`/api/admin/warp/${instanceId}/restart`),
     delete: (instanceId: string) => api.delete<{ message: string }>(`/api/admin/warp/${instanceId}`),
-    bind: (instanceId: string, organizationUuid: string) =>
-        api.post<WarpBindResponse>(`/api/admin/warp/${instanceId}/bind/${organizationUuid}`),
+    bind: (instanceId: string, organizationUuid: string, payload?: WarpBindRequest) =>
+        api.post<WarpBindResponse>(`/api/admin/warp/${instanceId}/bind/${organizationUuid}`, payload),
     unbind: (organizationUuid: string) => api.post<WarpBindResponse>(`/api/admin/warp/unbind/${organizationUuid}`),
 }

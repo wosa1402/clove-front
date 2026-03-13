@@ -13,7 +13,9 @@ import {
     ChevronRight,
     KeyRound,
     FileText,
+    Radio,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { AccountResponse } from '../api/types'
 import { accountsApi } from '../api/client'
 import { AccountModal } from '../components/AccountModal'
@@ -37,6 +39,53 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useIsMobile } from '@/hooks/use-mobile'
+
+function getNetworkModeLabel(mode: AccountResponse['network_mode']) {
+    switch (mode) {
+        case 'direct_auto':
+            return '本机直连'
+        case 'direct_ipv4':
+            return '本机 IPv4'
+        case 'direct_ipv6':
+            return '本机 IPv6'
+        case 'warp':
+            return 'WARP'
+        case 'custom_proxy':
+            return '自定义代理'
+        default:
+            return '跟随默认'
+    }
+}
+
+function getNetworkModeBadge(mode: AccountResponse['network_mode']) {
+    switch (mode) {
+        case 'direct_auto':
+            return <Badge className='bg-slate-700 hover:bg-slate-700'>本机直连</Badge>
+        case 'direct_ipv4':
+            return <Badge className='bg-blue-600 hover:bg-blue-600'>本机 IPv4</Badge>
+        case 'direct_ipv6':
+            return <Badge className='bg-cyan-600 hover:bg-cyan-600'>本机 IPv6</Badge>
+        case 'warp':
+            return <Badge className='bg-emerald-600 hover:bg-emerald-600'>WARP</Badge>
+        case 'custom_proxy':
+            return <Badge variant='secondary'>自定义代理</Badge>
+        default:
+            return <Badge variant='outline'>跟随默认</Badge>
+    }
+}
+
+function getProxyFamilyBadge(family?: AccountResponse['proxy_ip_family']) {
+    switch (family) {
+        case 'ipv4':
+            return <Badge className='bg-blue-600 hover:bg-blue-600'>IPv4</Badge>
+        case 'ipv6':
+            return <Badge className='bg-cyan-600 hover:bg-cyan-600'>IPv6</Badge>
+        case 'auto':
+            return <Badge variant='secondary'>AUTO</Badge>
+        default:
+            return null
+    }
+}
 
 export function Accounts() {
     const [accounts, setAccounts] = useState<AccountResponse[]>([])
@@ -82,6 +131,22 @@ export function Accounts() {
     const handleEdit = (account: AccountResponse) => {
         setEditingAccount(account)
         setModalOpen(true)
+    }
+
+    const handleTestEgress = async (account: AccountResponse) => {
+        try {
+            const response = await accountsApi.testEgress(account.organization_uuid)
+            const data = response.data
+            const parts = [
+                `模式: ${getNetworkModeLabel(data.network_mode)}`,
+                `IPv4: ${data.public_ipv4 || '-'}`,
+                `IPv6: ${data.public_ipv6 || '-'}`,
+            ]
+            toast.success(parts.join(' | '))
+            await loadAccounts()
+        } catch (error) {
+            console.error('Failed to test account egress:', error)
+        }
     }
 
     const handleAdd = () => {
@@ -220,6 +285,17 @@ export function Accounts() {
                     <CollapsibleContent>
                         <CardContent className='pt-0 space-y-3'>
                             <div className='space-y-2 text-sm'>
+                                <div className='flex justify-between gap-3'>
+                                    <span className='text-muted-foreground'>出口 IP</span>
+                                    <div className='flex flex-col items-end gap-1 text-right'>
+                                        <span className='font-mono break-all'>{account.egress_ip || '-'}</span>
+                                        {getProxyFamilyBadge(account.proxy_ip_family)}
+                                    </div>
+                                </div>
+                                <div className='flex justify-between gap-3'>
+                                    <span className='text-muted-foreground'>网络模式</span>
+                                    <div>{getNetworkModeBadge(account.network_mode)}</div>
+                                </div>
                                 <div className='flex justify-between'>
                                     <span className='text-muted-foreground'>最后使用</span>
                                     <span>{new Date(account.last_used).toLocaleString('zh-CN')}</span>
@@ -233,6 +309,10 @@ export function Accounts() {
                                 <Button size='sm' variant='outline' className='flex-1' onClick={() => handleEdit(account)}>
                                     <Pencil className='mr-2 h-4 w-4' />
                                     编辑
+                                </Button>
+                                <Button size='sm' variant='outline' className='flex-1' onClick={() => void handleTestEgress(account)}>
+                                    <Radio className='mr-2 h-4 w-4' />
+                                    测试出口
                                 </Button>
                                 <Button
                                     size='sm'
@@ -293,6 +373,9 @@ export function Accounts() {
                                         <TableHead>
                                             <Skeleton className='h-4 w-32' />
                                         </TableHead>
+                                        <TableHead>
+                                            <Skeleton className='h-4 w-32' />
+                                        </TableHead>
                                         <TableHead className='text-right'>
                                             <Skeleton className='h-4 w-16 ml-auto' />
                                         </TableHead>
@@ -318,6 +401,9 @@ export function Accounts() {
                                             </TableCell>
                                             <TableCell>
                                                 <Skeleton className='h-6 w-16 rounded-full' />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className='h-4 w-32' />
                                             </TableCell>
                                             <TableCell>
                                                 <Skeleton className='h-4 w-32' />
@@ -422,6 +508,8 @@ export function Accounts() {
                                     <TableHead>认证方式</TableHead>
                                     <TableHead>状态</TableHead>
                                     <TableHead>账户类型</TableHead>
+                                    <TableHead>出口 IP</TableHead>
+                                    <TableHead>网络模式</TableHead>
                                     <TableHead>最后使用</TableHead>
                                     <TableHead>重置时间</TableHead>
                                     <TableHead className='text-right'>操作</TableHead>
@@ -443,12 +531,19 @@ export function Accounts() {
                                                 <span>{getStatusName(account.status)}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell>
-                                            <AccountTypeBadge account={account} />
-                                        </TableCell>
-                                        <TableCell className='text-sm'>
-                                            {new Date(account.last_used).toLocaleString('zh-CN')}
-                                        </TableCell>
+                                            <TableCell>
+                                                <AccountTypeBadge account={account} />
+                                            </TableCell>
+                                            <TableCell className='text-sm'>
+                                                <div className='space-y-1'>
+                                                    <div className='font-mono break-all'>{account.egress_ip || '-'}</div>
+                                                    {getProxyFamilyBadge(account.proxy_ip_family)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className='text-sm'>{getNetworkModeBadge(account.network_mode)}</TableCell>
+                                            <TableCell className='text-sm'>
+                                                {new Date(account.last_used).toLocaleString('zh-CN')}
+                                            </TableCell>
                                         <TableCell className='text-sm'>
                                             {account.resets_at ? new Date(account.resets_at).toLocaleString('zh-CN') : '-'}
                                         </TableCell>
@@ -464,6 +559,10 @@ export function Accounts() {
                                                     <DropdownMenuItem onClick={() => handleEdit(account)}>
                                                         <Pencil className='mr-2 h-4 w-4' />
                                                         编辑
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => void handleTestEgress(account)}>
+                                                        <Radio className='mr-2 h-4 w-4' />
+                                                        测试出口
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         onClick={() => {

@@ -33,6 +33,7 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
         cookie_value: '',
         organization_uuid: '',
         capabilities: [] as string[],
+        network_mode: 'inherit' as 'inherit' | 'direct_auto' | 'direct_ipv4' | 'direct_ipv6',
     })
     const [accountType, setAccountType] = useState<'none' | 'Free' | 'Pro' | 'Max'>('none')
     const [loading, setLoading] = useState(false)
@@ -47,6 +48,12 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
                 cookie_value: '',
                 organization_uuid: account.organization_uuid,
                 capabilities: account.capabilities || [],
+                network_mode:
+                    account.network_mode === 'direct_auto' ||
+                    account.network_mode === 'direct_ipv4' ||
+                    account.network_mode === 'direct_ipv6'
+                        ? account.network_mode
+                        : 'inherit',
             })
 
             const caps = account.capabilities || []
@@ -122,6 +129,10 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
 
                 if (capabilities) {
                     updateData.capabilities = capabilities
+                }
+
+                if (!account.warp_instance_id) {
+                    updateData.network_mode = formData.network_mode
                 }
 
                 await accountsApi.update(account.organization_uuid, updateData)
@@ -241,6 +252,35 @@ export function AccountModal({ account, onClose }: AccountModalProps) {
                                     <SelectItem value='Max'>Max</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        <div className='space-y-2'>
+                            <Label htmlFor='network-mode'>网络出口</Label>
+                            {account?.warp_instance_id ? (
+                                <div className='rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground'>
+                                    当前账户已绑定 WARP，请到 WARP IP 页面切换自动 / IPv4 / IPv6 绑定。
+                                </div>
+                            ) : (
+                                <Select
+                                    value={formData.network_mode}
+                                    onValueChange={value =>
+                                        setFormData({
+                                            ...formData,
+                                            network_mode: value as 'inherit' | 'direct_auto' | 'direct_ipv4' | 'direct_ipv6',
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger className='w-full' id='network-mode'>
+                                        <SelectValue placeholder='选择网络出口模式' />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value='inherit'>跟随系统默认 / 全局代理</SelectItem>
+                                        <SelectItem value='direct_auto'>本机直连（自动）</SelectItem>
+                                        <SelectItem value='direct_ipv4'>本机直连 IPv4</SelectItem>
+                                        <SelectItem value='direct_ipv6'>本机直连 IPv6</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                     </CollapsibleContent>
                 </Collapsible>

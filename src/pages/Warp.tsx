@@ -106,6 +106,7 @@ export function Warp() {
     const [creating, setCreating] = useState(false)
     const [pendingActions, setPendingActions] = useState<Set<string>>(new Set())
     const [selectedAccounts, setSelectedAccounts] = useState<Record<string, string>>({})
+    const [selectedFamilies, setSelectedFamilies] = useState<Record<string, 'auto' | 'ipv4' | 'ipv6'>>({})
     const [registerProxyMode, setRegisterProxyMode] = useState<WarpRegisterMode>('default')
     const [registerProxyUrl, setRegisterProxyUrl] = useState('')
     const [endpointMode, setEndpointMode] = useState<WarpEndpointMode>('default')
@@ -411,14 +412,20 @@ export function Warp() {
             ) : (
                 <div className='grid gap-4 xl:grid-cols-2'>
                     {instances.map(instance => {
-                        const boundAccounts = accounts.filter(account => account.proxy_url === instance.proxy_url)
-                        const availableAccounts = accounts.filter(account => !account.proxy_url)
+                        const boundAccounts = accounts.filter(account => account.warp_instance_id === instance.instance_id)
+                        const availableAccounts = accounts.filter(account => !account.warp_instance_id && !account.proxy_url)
                         const selectedAccountValue = selectedAccounts[instance.instance_id]
+                        const selectedFamily = selectedFamilies[instance.instance_id] || 'auto'
                         const selectedAccount = availableAccounts.some(
                             account => account.organization_uuid === selectedAccountValue,
                         )
                             ? selectedAccountValue
                             : availableAccounts[0]?.organization_uuid
+                        const ipv4BoundAccounts = boundAccounts.filter(account => account.proxy_ip_family === 'ipv4')
+                        const ipv6BoundAccounts = boundAccounts.filter(account => account.proxy_ip_family === 'ipv6')
+                        const autoBoundAccounts = boundAccounts.filter(
+                            account => !account.proxy_ip_family || account.proxy_ip_family === 'auto',
+                        )
                         const startKey = `start:${instance.instance_id}`
                         const stopKey = `stop:${instance.instance_id}`
                         const restartKey = `restart:${instance.instance_id}`
@@ -458,13 +465,35 @@ export function Warp() {
                                         <div className='rounded-lg border bg-muted/30 p-3'>
                                             <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>
                                                 <Link2 className='h-4 w-4' />
-                                                代理地址
+                                                自动代理
                                             </div>
                                             <div className='font-mono text-sm break-all'>{instance.proxy_url}</div>
                                         </div>
                                         <div className='rounded-lg border bg-muted/30 p-3'>
                                             <div className='mb-1 text-sm text-muted-foreground'>端口</div>
                                             <div className='font-mono text-sm'>{instance.port}</div>
+                                        </div>
+                                        <div className='rounded-lg border bg-muted/30 p-3'>
+                                            <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>
+                                                <Link2 className='h-4 w-4' />
+                                                IPv4 专用代理
+                                            </div>
+                                            <div className='font-mono text-sm break-all'>{instance.ipv4_proxy_url}</div>
+                                        </div>
+                                        <div className='rounded-lg border bg-muted/30 p-3'>
+                                            <div className='mb-1 text-sm text-muted-foreground'>IPv4 代理端口</div>
+                                            <div className='font-mono text-sm'>{instance.ipv4_proxy_port}</div>
+                                        </div>
+                                        <div className='rounded-lg border bg-muted/30 p-3'>
+                                            <div className='mb-1 flex items-center gap-2 text-sm text-muted-foreground'>
+                                                <Link2 className='h-4 w-4' />
+                                                IPv6 专用代理
+                                            </div>
+                                            <div className='font-mono text-sm break-all'>{instance.ipv6_proxy_url}</div>
+                                        </div>
+                                        <div className='rounded-lg border bg-muted/30 p-3'>
+                                            <div className='mb-1 text-sm text-muted-foreground'>IPv6 代理端口</div>
+                                            <div className='font-mono text-sm'>{instance.ipv6_proxy_port}</div>
                                         </div>
                                         <div className='rounded-lg border bg-muted/30 p-3'>
                                             <div className='mb-1 text-sm text-muted-foreground'>最近启动</div>
@@ -562,65 +591,92 @@ export function Warp() {
                                         <div className='space-y-3'>
                                             <Label>绑定到账户</Label>
                                             <div className='flex flex-col gap-2 sm:flex-row'>
-                                            <Select
-                                                value={selectedAccount || undefined}
-                                                onValueChange={value =>
-                                                    setSelectedAccounts(prev => ({
-                                                        ...prev,
-                                                        [instance.instance_id]: value,
-                                                    }))
-                                                }
-                                            >
-                                                <SelectTrigger className='w-full' disabled={availableAccounts.length === 0}>
-                                                    <SelectValue
-                                                        placeholder={
-                                                            availableAccounts.length === 0
-                                                                ? '没有可绑定的 Claude 账户'
-                                                                : '选择一个 Claude 账户'
-                                                        }
-                                                    />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {availableAccounts.length === 0 ? (
-                                                        <div className='px-2 py-1.5 text-sm text-muted-foreground'>
-                                                            所有账户都已绑定，请先解绑后再重新分配
-                                                        </div>
-                                                    ) : (
-                                                        availableAccounts.map(account => (
-                                                            <SelectItem key={account.organization_uuid} value={account.organization_uuid}>
-                                                                {shortId(account.organization_uuid)}
-                                                            </SelectItem>
-                                                        ))
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <Button
-                                                onClick={() => {
-                                                    if (!selectedAccount) {
-                                                        toast.error('请先选择要绑定的账户')
-                                                        return
+                                                <Select
+                                                    value={selectedAccount || undefined}
+                                                    onValueChange={value =>
+                                                        setSelectedAccounts(prev => ({
+                                                            ...prev,
+                                                            [instance.instance_id]: value,
+                                                        }))
                                                     }
+                                                >
+                                                    <SelectTrigger className='w-full' disabled={availableAccounts.length === 0}>
+                                                        <SelectValue
+                                                            placeholder={
+                                                                availableAccounts.length === 0
+                                                                    ? '没有可绑定的 Claude 账户'
+                                                                    : '选择一个 Claude 账户'
+                                                            }
+                                                        />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {availableAccounts.length === 0 ? (
+                                                            <div className='px-2 py-1.5 text-sm text-muted-foreground'>
+                                                                所有账户都已绑定，请先解绑后再重新分配
+                                                            </div>
+                                                        ) : (
+                                                            availableAccounts.map(account => (
+                                                                <SelectItem key={account.organization_uuid} value={account.organization_uuid}>
+                                                                    {shortId(account.organization_uuid)}
+                                                                </SelectItem>
+                                                            ))
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
 
-                                                    void runAction(bindKey, async () => {
-                                                        await warpApi.bind(instance.instance_id, selectedAccount)
-                                                        toast.success(`已将 ${instance.instance_id} 绑定到账户 ${shortId(selectedAccount)}`)
-                                                    })
-                                                }}
-                                                disabled={
-                                                    instance.status !== 'running' ||
-                                                    pendingActions.has(bindKey) ||
-                                                    availableAccounts.length === 0
-                                                }
-                                            >
-                                                {pendingActions.has(bindKey) ? (
-                                                    <Loader2 className='h-4 w-4 animate-spin' />
-                                                ) : (
-                                                    <Link2 className='h-4 w-4' />
-                                                )}
-                                                绑定
-                                            </Button>
-                                        </div>
+                                                <Select
+                                                    value={selectedFamily}
+                                                    onValueChange={value =>
+                                                        setSelectedFamilies(prev => ({
+                                                            ...prev,
+                                                            [instance.instance_id]: value as 'auto' | 'ipv4' | 'ipv6',
+                                                        }))
+                                                    }
+                                                >
+                                                    <SelectTrigger className='w-full sm:w-[180px]'>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value='auto'>自动</SelectItem>
+                                                        <SelectItem value='ipv4' disabled={!instance.public_ipv4}>
+                                                            绑定 IPv4
+                                                        </SelectItem>
+                                                        <SelectItem value='ipv6' disabled={!instance.public_ipv6}>
+                                                            绑定 IPv6
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+
+                                                <Button
+                                                    onClick={() => {
+                                                        if (!selectedAccount) {
+                                                            toast.error('请先选择要绑定的账户')
+                                                            return
+                                                        }
+
+                                                        void runAction(bindKey, async () => {
+                                                            await warpApi.bind(instance.instance_id, selectedAccount, {
+                                                                ip_family: selectedFamily,
+                                                            })
+                                                            toast.success(
+                                                                `已将 ${instance.instance_id} 以 ${selectedFamily.toUpperCase()} 模式绑定到账户 ${shortId(selectedAccount)}`,
+                                                            )
+                                                        })
+                                                    }}
+                                                    disabled={
+                                                        instance.status !== 'running' ||
+                                                        pendingActions.has(bindKey) ||
+                                                        availableAccounts.length === 0
+                                                    }
+                                                >
+                                                    {pendingActions.has(bindKey) ? (
+                                                        <Loader2 className='h-4 w-4 animate-spin' />
+                                                    ) : (
+                                                        <Link2 className='h-4 w-4' />
+                                                    )}
+                                                    绑定
+                                                </Button>
+                                            </div>
 
                                         {availableAccounts.length === 0 && (
                                             <p className='text-sm text-muted-foreground'>
@@ -633,37 +689,59 @@ export function Warp() {
                                             {boundAccounts.length === 0 ? (
                                                 <p className='text-sm text-muted-foreground'>暂无绑定账户</p>
                                             ) : (
-                                                <div className='flex flex-wrap gap-2'>
-                                                    {boundAccounts.map(account => {
-                                                        const unbindKey = `unbind:${account.organization_uuid}`
-                                                        return (
-                                                            <div
-                                                                key={account.organization_uuid}
-                                                                className='flex items-center gap-2 rounded-md border px-3 py-2 text-sm'
-                                                            >
-                                                                <span className='font-mono'>{shortId(account.organization_uuid)}</span>
-                                                                <Button
-                                                                    variant='ghost'
-                                                                    size='sm'
-                                                                    className='h-7 px-2'
-                                                                    onClick={() =>
-                                                                        runAction(unbindKey, async () => {
-                                                                            await warpApi.unbind(account.organization_uuid)
-                                                                            toast.success(`已解绑账户 ${shortId(account.organization_uuid)}`)
-                                                                        })
-                                                                    }
-                                                                    disabled={pendingActions.has(unbindKey)}
-                                                                >
-                                                                    {pendingActions.has(unbindKey) ? (
-                                                                        <Loader2 className='h-4 w-4 animate-spin' />
-                                                                    ) : (
-                                                                        <Unplug className='h-4 w-4' />
-                                                                    )}
-                                                                    解绑
-                                                                </Button>
-                                                            </div>
-                                                        )
-                                                    })}
+                                                <div className='space-y-3'>
+                                                    {[
+                                                        { label: '自动', accounts: autoBoundAccounts },
+                                                        { label: 'IPv4', accounts: ipv4BoundAccounts },
+                                                        { label: 'IPv6', accounts: ipv6BoundAccounts },
+                                                    ].map(group => (
+                                                        <div key={group.label} className='space-y-2'>
+                                                            <div className='text-xs text-muted-foreground'>{group.label} 绑定</div>
+                                                            {group.accounts.length === 0 ? (
+                                                                <p className='text-sm text-muted-foreground'>暂无 {group.label} 绑定账户</p>
+                                                            ) : (
+                                                                <div className='flex flex-wrap gap-2'>
+                                                                    {group.accounts.map(account => {
+                                                                        const unbindKey = `unbind:${account.organization_uuid}`
+                                                                        return (
+                                                                            <div
+                                                                                key={account.organization_uuid}
+                                                                                className='flex items-center gap-2 rounded-md border px-3 py-2 text-sm'
+                                                                            >
+                                                                                <span className='font-mono'>
+                                                                                    {shortId(account.organization_uuid)}
+                                                                                </span>
+                                                                                <Badge variant='secondary'>
+                                                                                    {(account.proxy_ip_family || 'auto').toUpperCase()}
+                                                                                </Badge>
+                                                                                <Button
+                                                                                    variant='ghost'
+                                                                                    size='sm'
+                                                                                    className='h-7 px-2'
+                                                                                    onClick={() =>
+                                                                                        runAction(unbindKey, async () => {
+                                                                                            await warpApi.unbind(account.organization_uuid)
+                                                                                            toast.success(
+                                                                                                `已解绑账户 ${shortId(account.organization_uuid)}`,
+                                                                                            )
+                                                                                        })
+                                                                                    }
+                                                                                    disabled={pendingActions.has(unbindKey)}
+                                                                                >
+                                                                                    {pendingActions.has(unbindKey) ? (
+                                                                                        <Loader2 className='h-4 w-4 animate-spin' />
+                                                                                    ) : (
+                                                                                        <Unplug className='h-4 w-4' />
+                                                                                    )}
+                                                                                    解绑
+                                                                                </Button>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
